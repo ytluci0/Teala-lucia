@@ -38,6 +38,12 @@ At the tested 1839 × 1031 viewport with device pixel ratio 1, the core renders 
 
 High quality is the default. `?quality=ultra` allows larger render targets on high-density displays, within a pixel budget. `?quality=reference` uses the original resolution limits for comparisons. Sustained slow frames can lower the room resolution slightly; it recovers when sustained headroom returns. Decorative motion respects the existing pause control, reduced-motion preference, and hidden tabs.
 
+## Interaction sounds
+
+Cards and agent spotlights have soft opening and closing chimes. Moving the carousel produces a short directional tick when a different card reaches the centre; rapid movement is rate-limited. Attachments, motion controls, and the listening/demo controls have quiet confirmation cues.
+
+Use the speaker button beside the pause button to mute or enable sound effects. The preference is remembered in this browser. Audio starts after a user interaction, stops when the tab is hidden, and is released when the interface unmounts. Cues are synthesized locally with the [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Best_practices), with no audio downloads or additional animation loop. The application remains usable if audio is unavailable.
+
 ## Verification
 
 ```powershell

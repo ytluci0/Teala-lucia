@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 import { agents, data, icons, decoration } from './data/preview.js';
 import { createLuciaController } from './engine/controller.js';
 import './styles/lucia.css';
+import './styles/sounds.css';
 
 function Icon({ name, className = '' }) {
   return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" dangerouslySetInnerHTML={{ __html: icons[name] || icons.tasks }} />;
@@ -15,6 +16,7 @@ const Header = memo(function Header() {
       <span className="preview-label"><i /> SPATIAL UI PREVIEW</span>
       <button className="quiet-button" id="demo">Preview a task</button>
       <button className="icon-button" id="motion-toggle" aria-label="Pause decorative motion" aria-pressed="false" title="Pause motion"><Icon name="pause" /></button>
+      <button className="icon-button" id="sound-toggle" type="button" aria-label="Sound effects" aria-pressed="true" title="Mute sound effects"><Icon name="soundOn" /></button>
       <button className="icon-button" id="about" aria-label="About this UI preview">?</button>
     </div>
   </header>;

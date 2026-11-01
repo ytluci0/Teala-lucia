@@ -15,6 +15,8 @@ export const icons={
     mic:'<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v4M8 23h8"/>',
     attach:'<path d="m8 17 8-8a3 3 0 0 0-4-4L4 13a5 5 0 0 0 7 7l9-9a7 7 0 0 0-10-10L2 9" transform="translate(2 2) scale(.85)"/>',
     close:'<path d="m6 6 12 12M18 6 6 18"/>',pause:'<path d="M8 4v16M16 4v16"/>',play:'<path d="m7 3 13 9-13 9z"/>',
+    soundOn:'<path d="m11 4-6 5H2v6h3l6 5V4ZM15 8a6 6 0 0 1 0 8M18 5a10 10 0 0 1 0 14"/>',
+    soundOff:'<path d="m11 4-6 5H2v6h3l6 5V4ZM16 9l6 6M22 9l-6 6"/>',
     check:'<path d="m4 12 5 5L20 6"/>',bolt:'<path d="m13 2-9 12h7l-1 8 10-13h-7z"/>',server:'<rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M7 6h.1M7 17h.1M12 6h5M12 17h5"/>'
   };
 export function svg(name,cls=''){return `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]||icons.tasks}</svg>`;}

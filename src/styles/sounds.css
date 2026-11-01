@@ -1,0 +1,7 @@
+/* Keep the original design stylesheet intact; fit the added control on small phones. */
+#sound-toggle[aria-pressed="false"] { color: #86a9c0; }
+@media (max-width: 360px) {
+  .topbar { gap: 8px; }
+  .header-actions { gap: 5px; }
+  .header-actions .quiet-button { padding-inline: 8px; }
+}

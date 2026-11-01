@@ -1,6 +1,7 @@
 import createSphereRenderer from './gpu-sphere.js';
 import SpatialEnvironment from './environment.js';
 import LuciaCoreGaze from './gaze.js';
+import LuciaSounds from './sounds.js';
 import { data, agents, svg, row, cardDetails, agentDetails } from '../data/preview.js';
 
 /* Lucia UI-only preview. All counts, tasks and agent outcomes are demo data.
@@ -11,6 +12,28 @@ export function createLuciaController(root, ui) {
   const $=(q,scope=root)=>scope.querySelector(q), $$=(q,scope=root)=>[...scope.querySelectorAll(q)];
   function listen(target,type,handler,options={}) { target.addEventListener(type,handler,{...options,signal:lifecycle.signal}); }
   const app=root, carousel=$('.lucia-carousel'), dialog=$('dialog'), core=$('#core');
+  let soundUiState='';
+  const sounds = new LuciaSounds({ onChange: syncSound });
+  function syncSound() {
+    const button=$('#sound-toggle');
+    const state=`${sounds.enabled}:${sounds.available}`;
+    if(soundUiState!==state){
+      button.innerHTML=svg(sounds.enabled?'soundOn':'soundOff');
+      button.setAttribute('aria-pressed',String(sounds.enabled));
+      button.title=!sounds.available?'Sound effects unavailable in this browser':sounds.enabled?'Mute sound effects':'Enable sound effects';
+      button.disabled=!sounds.available;soundUiState=state;
+    }
+    if(import.meta.env.DEV){button.dataset.audioState=sounds.status;button.dataset.lastCue=sounds.lastCue||'';button.dataset.cueCount=String(sounds.played);}
+  }
+  function unlockSound(e){if(e.isTrusted)sounds.unlock();}
+  listen(root,'pointerdown',unlockSound,{capture:true});
+  listen(root,'keydown',unlockSound,{capture:true});
+  listen(root,'click',unlockSound,{capture:true});
+  $('#sound-toggle').onclick=()=>{
+    sounds.setEnabled(!sounds.enabled);
+    if(sounds.enabled)sounds.unlock().then(ready=>{if(ready)sounds.play('tap');});
+  };
+  syncSound();
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
   const cards=$$('.carousel-card'), dots=$$('.page-dot'), agentButtons=$$('.agent-glass');
   dots.forEach((b,i)=>b.onclick=()=>go(i));
@@ -21,10 +44,12 @@ export function createLuciaController(root, ui) {
   const gaze=new LuciaCoreGaze(core,$('#core-attitude'));
   let position=2,target=2,step=280,carouselWidth=0,raf=0,last=0,clock=0,paused=false,dirty=true,drag=null,pendingOpen=null,source=null,closing=false,openAnimation=null;
   let activeAgent=-1,pulseDirection=1,pulseStart=0,mode='idle',demoToken=0,wheelTimer=0,toastTimer=0;
+  let soundCard=2;
   const geometry=[], metrics={frameIntervals:[],jsFrameCosts:[],ringCosts:[],sceneCosts:[],ringRenderer:'initializing'};
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   function renderCards(){
     const nearest=clamp(Math.round(position),0,data.length-1);
+    if(nearest!==soundCard){sounds.play('move',nearest-soundCard);soundCard=nearest;}
     cards.forEach((card,i)=>{
       const d=i-position,n=Math.min(Math.abs(d),3.5),f=Math.max(0,1-Math.abs(d)/1.25);
       // Neutral card geometry; all perspective is positional, not baked into the artwork.
@@ -122,7 +147,7 @@ export function createLuciaController(root, ui) {
   function morphTransform(from,to){return `translate(${from.left+from.width/2-to.left-to.width/2}px,${from.top+from.height/2-to.top-to.height/2}px) scale(${from.width/to.width},${from.height/to.height})`;}
   function openSpotlight(details,button){
     if(dialog.open)return;
-    gaze.release();source=button||document.activeElement;closing=false;fillSpotlight(details);const origin=source?.getBoundingClientRect();dialog.showModal();
+    gaze.release();source=button||document.activeElement;closing=false;fillSpotlight(details);const origin=source?.getBoundingClientRect();dialog.showModal();sounds.play('open');
     const shell=$('.spotlight-shell'),content=$('.spotlight-content'),dest=dialog.getBoundingClientRect();
     if(!reduced.matches&&origin&&origin.width>0){
       shell.animate([{transform:morphTransform(origin,dest),opacity:.65},{transform:'none',opacity:1}],{duration:440,easing:'cubic-bezier(.18,.78,.22,1)'});
@@ -131,7 +156,7 @@ export function createLuciaController(root, ui) {
     $('.spotlight-close').focus();
   }
   async function closeSpotlight(){
-    if(!dialog.open||closing)return;closing=true;openAnimation?.cancel();
+    if(!dialog.open||closing)return;closing=true;sounds.play('close');openAnimation?.cancel();
     const content=$('.spotlight-content'),shell=$('.spotlight-shell'),from=dialog.getBoundingClientRect(),to=source?.getBoundingClientRect();
     if(!reduced.matches&&to&&to.width>0){
       const fade=content.animate([{opacity:1},{opacity:0}],{duration:140,fill:'forwards'});
@@ -146,7 +171,7 @@ export function createLuciaController(root, ui) {
   listen(dialog,'cancel',e=>{e.preventDefault();closeSpotlight();});
   listen(dialog,'click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeSpotlight();}});
   function toast(text){const box=$('.toast');$('.glass-content',box).textContent=text;box.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>box.hidden=true,3300);}
-  $('#attach').onclick=()=>toast('Attachment control preview only. No file is selected or uploaded.');
+  $('#attach').onclick=()=>{sounds.play('tap');toast('Attachment control preview only. No file is selected or uploaded.');};
   $('#about').onclick=e=>openSpotlight({key:'knowledge',title:'The Lucia interface',icon:'knowledge',description:'An offline, UI-only motion study. There are no AI, email, calendar, or production-system connections.',rows:[row('Explore the cards','Drag, swipe, scroll, or use the arrow controls.','Interactive','projects'),row('Open a spotlight','Select a card or agent. Press Escape to close.','Interactive','tasks'),row('Preview a task','Watch a simulated listening → delegation → result sequence.','Simulated','bolt')],note:'Move your mouse to let Lucia look toward it. Only the core tilts: agents, cards, composer, platform and room camera stay fixed. The core is now a perspective-projected sphere, with 3D filaments wrapping its front and back and the text embedded at different depths. The core recentres when the pointer leaves, when a spotlight opens, or while you type or drag. The renderer uses Canvas to project XYZ geometry. It does not rotate a PNG or a flat ring. Reflections are stylized, not physically traced. All activity is simulated.'},e.currentTarget);
   listen($('#composer'),'submit',e=>{
     e.preventDefault();const input=$('#prompt'),text=input.value.trim();if(!text)return;
@@ -162,7 +187,7 @@ export function createLuciaController(root, ui) {
   }
   const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   async function runDemo(){
-    if(dialog.open)return;const token=++demoToken;$('#demo').disabled=true;
+    if(dialog.open)return;sounds.play('confirm');const token=++demoToken;$('#demo').disabled=true;
     $('#stage-status').textContent='Simulated task · no systems are being checked';
     setState('listening','Listening · demonstration');await delay(reduced.matches?200:1900);if(disposed||token!==demoToken)return;
     setState('working','Delegating to Engineering',1);await delay(reduced.matches?200:2700);if(disposed||token!==demoToken)return;
@@ -173,10 +198,10 @@ export function createLuciaController(root, ui) {
     $('#stage-status').textContent='Six specialists. One intelligence.';
   }
   $('#demo').onclick=runDemo;
-  $('#mic').onclick=async()=>{if(mode!=='idle')return;setState('listening','Listening · visual preview');toast('Listening animation only. Your microphone is not accessed.');await delay(3000);if(!disposed&&mode==='listening')setState('idle','Ready when you are');};
+  $('#mic').onclick=async()=>{if(mode!=='idle')return;sounds.play('confirm');setState('listening','Listening · visual preview');toast('Listening animation only. Your microphone is not accessed.');await delay(3000);if(!disposed&&mode==='listening')setState('idle','Ready when you are');};
   function syncMotion(){app.classList.toggle('motion-paused',paused||reduced.matches);$('#motion-toggle').innerHTML=svg(paused?'play':'pause');$('#motion-toggle').setAttribute('aria-label',paused?'Resume decorative motion':'Pause decorative motion');$('#motion-toggle').setAttribute('aria-pressed',String(paused));last=0;renderer.firstDraw=false;wake();}
-  $('#motion-toggle').onclick=()=>{paused=!paused;syncMotion();};listen(reduced,'change',syncMotion);
-  listen(document,'visibilitychange',()=>{if(document.hidden){if(raf)cancelAnimationFrame(raf);raf=0;}else{last=0;wake();}});
+  $('#motion-toggle').onclick=()=>{sounds.play('tap');paused=!paused;syncMotion();};listen(reduced,'change',syncMotion);
+  listen(document,'visibilitychange',()=>{if(document.hidden){sounds.suspend();if(raf)cancelAnimationFrame(raf);raf=0;}else{last=0;wake();}});
   listen(window,'lucia-scene-ready',()=>{dirty=true;renderer.firstDraw=false;wake();});
   listen(window,'lucia-visual-ready',()=>{renderer.firstDraw=false;wake();});
   window.LuciaUI={get position(){return position;},get target(){return target;},get mode(){return mode;},get reducedMotion(){return reduced.matches;},metrics,scene,gaze,renderer,wake,select:selectCard,centre:go,pause:()=>{paused=true;syncMotion();},resume:()=>{paused=false;syncMotion();}};
@@ -186,7 +211,7 @@ export function createLuciaController(root, ui) {
     destroy() {
       disposed=true;demoToken++;lifecycle.abort();resizeObserver.disconnect();
       cancelAnimationFrame(raf);clearTimeout(wheelTimer);clearTimeout(toastTimer);
-      gaze.destroy();scene.destroy?.();renderer.destroy?.();
+      sounds.destroy();gaze.destroy();scene.destroy?.();renderer.destroy?.();
       root.getAnimations({subtree:true}).forEach(a=>a.cancel());
       if(dialog.open)dialog.close();
       $$('button').forEach(b=>b.onclick=null);

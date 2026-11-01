@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.vite/
+*.log
+artifacts/
+.env
+.env.*
+/%USERPROFILE%/
+
+# Local snapshots and earlier standalone iterations
+backups/
+backup-before-restoration-*/
+/app.js
+/glass.css
+/style.css
